@@ -59,13 +59,14 @@ class TabProvider with ChangeNotifier {
       content: FutureBuilder<String>(
         future: navigate(url: getStartPage()),
         builder: (context, snapshot) {
-          if (snapshot.hasData) {
-            // Schedule title update for next frame to avoid build phase issues
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              _updateTabTitle(_tabs.length - 1, snapshot.data!);
-            });
-            return _buildGeminiContent(snapshot.data!);
-          } else if (snapshot.hasError) {
+                  if (snapshot.hasData) {
+          // Schedule title update for next frame to avoid build phase issues
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _updateTabTitle(_tabs.length - 1, snapshot.data!);
+          });
+          // Pass the start page URL to resolve relative links
+          return _buildGeminiContent(snapshot.data!, baseUrl: getStartPage());
+        } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
             return const Center(child: CircularProgressIndicator());
@@ -129,7 +130,7 @@ class TabProvider with ChangeNotifier {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _updateTabTitle(_activeTabIndex, snapshot.data!);
             });
-            return _buildGeminiContent(snapshot.data!);
+            return _buildGeminiContent(snapshot.data!, baseUrl: url);
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
@@ -189,7 +190,7 @@ class TabProvider with ChangeNotifier {
   }
 
   // Build Gemini content using the parser and renderer
-  Widget _buildGeminiContent(String content) {
+  Widget _buildGeminiContent(String content, {String? baseUrl}) {
     // Check if this is an error response
     if (content.startsWith('Failed to fetch')) {
       // This is an error response, show as plain text
@@ -224,8 +225,9 @@ class TabProvider with ChangeNotifier {
       }
       
       if (geminiContent.isNotEmpty) {
-        // Parse and render as Gemini content
-        final elements = parseGemtext(geminiContent);
+        // Parse and render as Gemini content using the compliant parser
+        // Pass the current URL to resolve relative links
+        final elements = parseGemtext(geminiContent, baseUrl: baseUrl);
         
         return GeminiRenderer(
           elements: elements,
@@ -238,6 +240,7 @@ class TabProvider with ChangeNotifier {
     }
     
     // If no status header, treat as raw Gemini content
+    // Note: We can't resolve relative URLs here since we don't have a base URL
     final elements = parseGemtext(content);
     
     return GeminiRenderer(

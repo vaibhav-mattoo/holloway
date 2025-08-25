@@ -45,24 +45,30 @@ class DesktopControlBar extends StatelessWidget implements PreferredSizeWidget {
     );
   }
 
-    Widget _buildUrlBar() {
+  Widget _buildUrlBar() {
+    // expanded to take up remaining space between navigation and menu controls regardless of screen size
     return Expanded(
+      // padding to ensure url bar is not too close to navigation/menu controls and top and bottom edges
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        // listen to TabProvider for changes to active tab's display URL
         child: Consumer<TabProvider>(
           builder: (context, tabProvider, child) {
             final displayUrl = tabProvider.activeTabDisplayUrl;
-            
+
+            // is a material 3 search bar with suggestions
             return SearchAnchor(
               builder: (BuildContext context, SearchController controller) {
                 // Initialize controller text when it doesn't match the current display URL
+                // needed to ensure search bar updates when active tab changes
                 if (controller.text != displayUrl) {
                   controller.text = displayUrl;
                 }
-                
+
+                // this is the visible part of search anchor
                 return SearchBar(
                   controller: controller,
-                  hintText: 'Enter gemini://, gopher://, or finger:// URL',
+                  hintText: 'Enter URL or search',
                   onSubmitted: (url) {
                     if (url.isNotEmpty) {
                       tabProvider.navigateToUrl(url);
@@ -73,18 +79,21 @@ class DesktopControlBar extends StatelessWidget implements PreferredSizeWidget {
                     tabProvider.updateActiveTabDisplayUrl(value);
                   },
                   onTap: () {
-                    // This will open the search suggestions view
+                    // TODO: need to implement this based on bookmarks and history
                   },
+                  // adds a search icon to the end of the search bar
                   trailing: [
                     IconButton(
                       icon: const Icon(Icons.search),
                       iconSize: 20,
+                      // removes the default padding around the icon button - needed to make it look natural
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(
                         minWidth: 40,
                         minHeight: 40,
                       ),
                       onPressed: () {
+                        // allows user to submit the current text in the search bar
                         final url = controller.text;
                         if (url.isNotEmpty) {
                           tabProvider.navigateToUrl(url);
@@ -92,13 +101,16 @@ class DesktopControlBar extends StatelessWidget implements PreferredSizeWidget {
                       },
                     ),
                   ],
+                  // removes the default border and shadow to make it look flat
                   shadowColor: WidgetStateProperty.all(Colors.transparent),
                   elevation: WidgetStateProperty.all(0.0),
                 );
               },
-              suggestionsBuilder: (BuildContext context, SearchController controller) {
-                return [];
-              },
+              // TODO: fill in suggestions based on bookmarks and history
+              suggestionsBuilder:
+                  (BuildContext context, SearchController controller) {
+                    return [];
+                  },
             );
           },
         ),
