@@ -6,12 +6,12 @@
 import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
-// These functions are ignored because they are not marked as `pub`: `connect_and_fetch_gemini`, `connect_and_fetch_gopher`
+// These functions are ignored because they are not marked as `pub`: `connect_and_fetch_finger`, `connect_and_fetch_gemini`, `connect_and_fetch_gopher`
 
 String greet({required String name}) =>
     RustLib.instance.api.crateApiSimpleGreet(name: name);
 
-/// Navigate to a Gemini or Gopher URL and return the plaintext content
+/// Navigate to a Gemini, Gopher, or Finger URL and return the plaintext content
 Future<String> navigate({required String url}) =>
     RustLib.instance.api.crateApiSimpleNavigate(url: url);
 

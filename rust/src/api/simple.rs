@@ -15,7 +15,7 @@ pub fn init_app() {
     flutter_rust_bridge::setup_default_user_utils();
 }
 
-/// Navigate to a Gemini or Gopher URL and return the plaintext content
+/// Navigate to a Gemini, Gopher, or Finger URL and return the plaintext content
 #[flutter_rust_bridge::frb]
 pub async fn navigate(url: String) -> Result<String, String> {
     // Parse the URL to validate it
@@ -47,7 +47,23 @@ pub async fn navigate(url: String) -> Result<String, String> {
                 Err(e) => Err(format!("Failed to fetch {}: {}", url, e)),
             }
         }
-        _ => Err("Only gemini:// and gopher:// URLs are supported".to_string()),
+        "finger" => {
+            let host = match parsed_url.host_str() {
+                Some(h) => h,
+                None => return Err("Invalid host in URL".to_string()),
+            };
+            let port = parsed_url.port().unwrap_or(79);
+            let username = if parsed_url.username().is_empty() {
+                parsed_url.path().trim_start_matches('/').to_string()
+            } else {
+                parsed_url.username().to_string()
+            };
+            match connect_and_fetch_finger(host, port, &username).await {
+                Ok(content) => Ok(content),
+                Err(e) => Err(format!("Failed to fetch {}: {}", url, e)),
+            }
+        }
+        _ => Err("Only gemini://, gopher://, and finger:// URLs are supported".to_string()),
     }
 }
 
@@ -130,6 +146,36 @@ async fn connect_and_fetch_gopher(host: &str, port: u16, path: &str) -> Result<S
 
     stream
         .write_all(format!("{}\r\n", path).as_bytes())
+        .map_err(|e| e.to_string())?;
+
+    let mut response = Vec::new();
+    stream
+        .read_to_end(&mut response)
+        .map_err(|e| e.to_string())?;
+
+    Ok(String::from_utf8_lossy(&response).to_string())
+}
+
+/// Connect to Finger server and fetch content
+async fn connect_and_fetch_finger(host: &str, port: u16, username: &str) -> Result<String, String> {
+    let socket_addr = format!("{}:{}", host, port);
+
+    let mut stream = match TcpStream::connect_timeout(
+        &socket_addr
+            .to_socket_addrs()
+            .map_err(|e| e.to_string())?
+            .next()
+            .ok_or_else(|| "No addresses found".to_string())?,
+        Duration::new(10, 0),
+    ) {
+        Ok(s) => s,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    // Send finger request: username + CRLF
+    let request = format!("{}\r\n", username);
+    stream
+        .write_all(request.as_bytes())
         .map_err(|e| e.to_string())?;
 
     let mut response = Vec::new();

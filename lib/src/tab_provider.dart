@@ -68,6 +68,8 @@ class TabProvider with ChangeNotifier {
             // Pass the start page URL to resolve relative links
             if (getStartPage().startsWith('gopher://')) {
               return _buildGopherContent(snapshot.data!, baseUrl: getStartPage());
+            } else if (getStartPage().startsWith('finger://')) {
+              return _buildFingerContent(snapshot.data!, baseUrl: getStartPage());
             } else {
               return _buildGeminiContent(snapshot.data!, baseUrl: getStartPage());
             }
@@ -137,6 +139,8 @@ class TabProvider with ChangeNotifier {
             });
             if (url.startsWith('gopher://')) {
               return _buildGopherContent(snapshot.data!, baseUrl: url);
+            } else if (url.startsWith('finger://')) {
+              return _buildFingerContent(snapshot.data!, baseUrl: url);
             } else {
               return _buildGeminiContent(snapshot.data!, baseUrl: url);
             }
@@ -280,6 +284,52 @@ class TabProvider with ChangeNotifier {
           },
         );
       },
+    );
+  }
+
+  // Build Finger content
+  Widget _buildFingerContent(String content, {String? baseUrl}) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with protocol info
+            Container(
+              padding: const EdgeInsets.all(8.0),
+              margin: const EdgeInsets.only(bottom: 16.0),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8.0),
+                border: Border.all(color: Colors.blue.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.person, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Finger Protocol',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue[700],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            // Content
+            SelectableText(
+              content,
+              style: const TextStyle(
+                fontFamily: 'monospace',
+                fontSize: 14,
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
