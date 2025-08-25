@@ -3,6 +3,7 @@ import 'dart:math';
 import 'models/tab_info.dart';
 import 'rust/api/simple.dart';
 import 'parsers/gemini_parser.dart';
+import 'parsers/gopher_parser.dart';
 
 // manages the state of all browser tabs
 // with ChangeNotifier to notify listeners of state changes
@@ -59,14 +60,18 @@ class TabProvider with ChangeNotifier {
       content: FutureBuilder<String>(
         future: navigate(url: getStartPage()),
         builder: (context, snapshot) {
-                  if (snapshot.hasData) {
-          // Schedule title update for next frame to avoid build phase issues
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            _updateTabTitle(_tabs.length - 1, snapshot.data!);
-          });
-          // Pass the start page URL to resolve relative links
-          return _buildGeminiContent(snapshot.data!, baseUrl: getStartPage());
-        } else if (snapshot.hasError) {
+          if (snapshot.hasData) {
+            // Schedule title update for next frame to avoid build phase issues
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              _updateTabTitle(_tabs.length - 1, snapshot.data!);
+            });
+            // Pass the start page URL to resolve relative links
+            if (getStartPage().startsWith('gopher://')) {
+              return _buildGopherContent(snapshot.data!, baseUrl: getStartPage());
+            } else {
+              return _buildGeminiContent(snapshot.data!, baseUrl: getStartPage());
+            }
+          } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
             return const Center(child: CircularProgressIndicator());
@@ -130,7 +135,11 @@ class TabProvider with ChangeNotifier {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _updateTabTitle(_activeTabIndex, snapshot.data!);
             });
-            return _buildGeminiContent(snapshot.data!, baseUrl: url);
+            if (url.startsWith('gopher://')) {
+              return _buildGopherContent(snapshot.data!, baseUrl: url);
+            } else {
+              return _buildGeminiContent(snapshot.data!, baseUrl: url);
+            }
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
@@ -248,6 +257,28 @@ class TabProvider with ChangeNotifier {
       onLinkTap: (url) {
         // Navigate to the clicked link in the current tab
         navigateToUrl(url);
+      },
+    );
+  }
+
+  Widget _buildGopherContent(String content, {String? baseUrl}) {
+    final lines = parseGopherResponse(content);
+    return ListView.builder(
+      itemCount: lines.length,
+      itemBuilder: (context, index) {
+        final line = lines[index];
+        return ListTile(
+          title: Text(line.description),
+          onTap: () {
+            if (line.type == '1' || line.type == '0') {
+              var selector = line.selector;
+              if (!selector.startsWith('/')) {
+                selector = '/selector';
+              }
+              navigateToUrl('gopher://${line.host}:${line.port}$selector');
+            }
+          },
+        );
       },
     );
   }
