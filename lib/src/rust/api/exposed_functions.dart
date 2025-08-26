@@ -7,11 +7,12 @@ import '../frb_generated.dart';
 import 'package:flutter_rust_bridge/flutter_rust_bridge_for_generated.dart';
 
 String greet({required String name}) =>
-    RustLib.instance.api.crateApiSimpleGreet(name: name);
+    RustLib.instance.api.crateApiExposedFunctionsGreet(name: name);
 
 /// Navigate to a Gemini, Gopher, or Finger URL and return the plaintext content
 Future<String> navigate({required String url}) =>
-    RustLib.instance.api.crateApiSimpleNavigate(url: url);
+    RustLib.instance.api.crateApiExposedFunctionsNavigate(url: url);
 
 /// Get the default start page URL
-String getStartPage() => RustLib.instance.api.crateApiSimpleGetStartPage();
+String getStartPage() =>
+    RustLib.instance.api.crateApiExposedFunctionsGetStartPage();

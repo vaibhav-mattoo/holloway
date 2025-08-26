@@ -6,11 +6,11 @@
 // Static analysis wrongly picks the IO variant, thus ignore this
 // ignore_for_file: argument_type_not_assignable
 
+import 'api/exposed_functions.dart';
 import 'api/functions/navigate_internal.dart';
 import 'api/protocols/finger.dart';
 import 'api/protocols/gemini.dart';
 import 'api/protocols/gopher.dart';
-import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';

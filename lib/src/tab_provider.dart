@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:math';
 import 'models/tab_info.dart';
-import 'rust/api/simple.dart';
+import 'rust/api/exposed_functions.dart';
 import 'parsers/gemini_parser.dart';
 import 'parsers/gopher_parser.dart';
 

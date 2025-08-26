@@ -3,11 +3,11 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/exposed_functions.dart';
 import 'api/functions/navigate_internal.dart';
 import 'api/protocols/finger.dart';
 import 'api/protocols/gemini.dart';
 import 'api/protocols/gopher.dart';
-import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'frb_generated.dart';
@@ -59,7 +59,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
 
   @override
   Future<void> executeRustInitializers() async {
-    await api.crateApiSimpleInitApp();
+    await api.crateApiExposedFunctionsInitApp();
   }
 
   @override
@@ -70,7 +70,7 @@ class RustLib extends BaseEntrypoint<RustLibApi, RustLibApiImpl, RustLibWire> {
   String get codegenVersion => '2.11.1';
 
   @override
-  int get rustContentHash => 282436742;
+  int get rustContentHash => 568361207;
 
   static const kDefaultExternalLibraryLoaderConfig =
       ExternalLibraryLoaderConfig(
@@ -99,13 +99,13 @@ abstract class RustLibApi extends BaseApi {
     required String path,
   });
 
-  String crateApiSimpleGetStartPage();
+  String crateApiExposedFunctionsGetStartPage();
 
-  String crateApiSimpleGreet({required String name});
+  String crateApiExposedFunctionsGreet({required String name});
 
-  Future<void> crateApiSimpleInitApp();
+  Future<void> crateApiExposedFunctionsInitApp();
 
-  Future<String> crateApiSimpleNavigate({required String url});
+  Future<String> crateApiExposedFunctionsNavigate({required String url});
 
   Future<String> crateApiFunctionsNavigateInternalNavigateInternal({
     required String url,
@@ -232,7 +232,7 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
       );
 
   @override
-  String crateApiSimpleGetStartPage() {
+  String crateApiExposedFunctionsGetStartPage() {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
@@ -243,18 +243,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiSimpleGetStartPageConstMeta,
+        constMeta: kCrateApiExposedFunctionsGetStartPageConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleGetStartPageConstMeta =>
+  TaskConstMeta get kCrateApiExposedFunctionsGetStartPageConstMeta =>
       const TaskConstMeta(debugName: "get_start_page", argNames: []);
 
   @override
-  String crateApiSimpleGreet({required String name}) {
+  String crateApiExposedFunctionsGreet({required String name}) {
     return handler.executeSync(
       SyncTask(
         callFfi: () {
@@ -266,18 +266,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_String,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiSimpleGreetConstMeta,
+        constMeta: kCrateApiExposedFunctionsGreetConstMeta,
         argValues: [name],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleGreetConstMeta =>
+  TaskConstMeta get kCrateApiExposedFunctionsGreetConstMeta =>
       const TaskConstMeta(debugName: "greet", argNames: ["name"]);
 
   @override
-  Future<void> crateApiSimpleInitApp() {
+  Future<void> crateApiExposedFunctionsInitApp() {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -293,18 +293,18 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_unit,
           decodeErrorData: null,
         ),
-        constMeta: kCrateApiSimpleInitAppConstMeta,
+        constMeta: kCrateApiExposedFunctionsInitAppConstMeta,
         argValues: [],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleInitAppConstMeta =>
+  TaskConstMeta get kCrateApiExposedFunctionsInitAppConstMeta =>
       const TaskConstMeta(debugName: "init_app", argNames: []);
 
   @override
-  Future<String> crateApiSimpleNavigate({required String url}) {
+  Future<String> crateApiExposedFunctionsNavigate({required String url}) {
     return handler.executeNormal(
       NormalTask(
         callFfi: (port_) {
@@ -321,14 +321,14 @@ class RustLibApiImpl extends RustLibApiImplPlatform implements RustLibApi {
           decodeSuccessData: sse_decode_String,
           decodeErrorData: sse_decode_String,
         ),
-        constMeta: kCrateApiSimpleNavigateConstMeta,
+        constMeta: kCrateApiExposedFunctionsNavigateConstMeta,
         argValues: [url],
         apiImpl: this,
       ),
     );
   }
 
-  TaskConstMeta get kCrateApiSimpleNavigateConstMeta =>
+  TaskConstMeta get kCrateApiExposedFunctionsNavigateConstMeta =>
       const TaskConstMeta(debugName: "navigate", argNames: ["url"]);
 
   @override

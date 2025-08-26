@@ -3,11 +3,11 @@
 
 // ignore_for_file: unused_import, unused_element, unnecessary_import, duplicate_ignore, invalid_use_of_internal_member, annotate_overrides, non_constant_identifier_names, curly_braces_in_flow_control_structures, prefer_const_literals_to_create_immutables, unused_field
 
+import 'api/exposed_functions.dart';
 import 'api/functions/navigate_internal.dart';
 import 'api/protocols/finger.dart';
 import 'api/protocols/gemini.dart';
 import 'api/protocols/gopher.dart';
-import 'api/simple.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi' as ffi;

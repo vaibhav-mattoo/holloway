@@ -18,5 +18,6 @@ pub async fn navigate(url: String) -> Result<String, String> {
 /// Get the default start page URL
 #[flutter_rust_bridge::frb(sync)]
 pub fn get_start_page() -> String {
-    "gemini://gemini.circumlunar.space/".to_string()
+    "gemini://kennedy.gemi.dev/".to_string()
 }
+
