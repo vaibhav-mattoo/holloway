@@ -79,7 +79,7 @@ class TextElement {
           linkType = _determineLinkType(url);
           
           // Resolve relative URLs against base URL if provided
-          if (baseUrl != null && !url.startsWith('gemini://') && !url.startsWith('http://') && !url.startsWith('https://')) {
+          if (baseUrl != null && !url.startsWith('gemini://') && !url.startsWith('gopher://') && !url.startsWith('finger://') && !url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('mailto:') && !url.startsWith('xmpp:') && !url.startsWith('irc:')) {
             url = _resolveRelativeUrl(baseUrl, url);
           } else if (baseUrl != null && url.startsWith('://')) {
             // Handle URLs that start with :// (missing scheme)

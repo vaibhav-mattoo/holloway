@@ -128,7 +128,7 @@ class TabProvider with ChangeNotifier {
       }
       
       // Ensure URLs without scheme get gemini:// prefix (for relative URLs)
-      if (!processedUrl.contains('://') && !processedUrl.startsWith('/')) {
+      if (!processedUrl.contains('://') && !processedUrl.startsWith('/') && !processedUrl.startsWith('./') && !processedUrl.startsWith('../')) {
         processedUrl = 'gemini://$processedUrl';
       }
       

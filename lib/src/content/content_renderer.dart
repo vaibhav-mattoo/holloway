@@ -314,8 +314,8 @@ class ContentRenderer extends StatelessWidget {
       url = 'gemini$url';
     }
     
-    // Ensure URLs without scheme get gemini:// prefix
-    if (!url.contains('://')) {
+    // Only add gemini:// prefix if the URL doesn't have any scheme and isn't a relative path
+    if (!url.contains('://') && !url.startsWith('/') && !url.startsWith('./') && !url.startsWith('../')) {
       url = 'gemini://$url';
     }
     
