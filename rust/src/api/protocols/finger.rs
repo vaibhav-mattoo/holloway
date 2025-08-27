@@ -31,3 +31,4 @@ pub async fn connect_and_fetch_finger(host: &str, port: u16, username: &str) -> 
 
     Ok(String::from_utf8_lossy(&response).to_string())
 }
+

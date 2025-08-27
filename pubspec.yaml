@@ -36,6 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   provider: ^6.1.1
   flutter_rust_bridge: 2.11.1
+  url_launcher: ^6.2.5
   rust_lib_holloway:
     path: rust_builder
 

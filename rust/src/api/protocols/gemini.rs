@@ -57,3 +57,4 @@ pub async fn connect_and_fetch_gemini(host: &str, port: u16, url: &str) -> Resul
 
     Ok(String::from_utf8_lossy(&response[body_start..]).to_string())
 }
+

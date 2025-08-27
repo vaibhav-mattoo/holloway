@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 import 'models/tab_info.dart';
 import 'rust/api/exposed_functions.dart';
-import 'parsers/gemini_parser.dart';
-import 'parsers/gopher_parser.dart';
+import 'content/content_renderer.dart';
 
 // manages the state of all browser tabs
 // with ChangeNotifier to notify listeners of state changes
@@ -65,14 +64,13 @@ class TabProvider with ChangeNotifier {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _updateTabTitle(_tabs.length - 1, snapshot.data!);
             });
-            // Pass the start page URL to resolve relative links
-            if (getStartPage().startsWith('gopher://')) {
-              return _buildGopherContent(snapshot.data!, baseUrl: getStartPage());
-            } else if (getStartPage().startsWith('finger://')) {
-              return _buildFingerContent(snapshot.data!, baseUrl: getStartPage());
-            } else {
-              return _buildGeminiContent(snapshot.data!, baseUrl: getStartPage());
-            }
+            // Use the new ContentRenderer
+            return ContentRenderer(
+              content: snapshot.data!,
+              baseUrl: getStartPage(),
+              protocol: _getProtocolFromUrl(getStartPage()),
+              onNavigate: navigateToUrl,
+            );
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
@@ -120,30 +118,51 @@ class TabProvider with ChangeNotifier {
         tab.displayUrl = '';
       }
       
-      tab.updateUrl(url);
+      // Validate and fix the URL before processing
+      String processedUrl = url.trim();
+      if (processedUrl.isEmpty) return;
+      
+      // Fix malformed URLs that start with ://
+      if (processedUrl.startsWith('://')) {
+        processedUrl = 'gemini$processedUrl';
+      }
+      
+      // Ensure URLs without scheme get gemini:// prefix (for relative URLs)
+      if (!processedUrl.contains('://') && !processedUrl.startsWith('/')) {
+        processedUrl = 'gemini://$processedUrl';
+      }
+      
+      tab.updateUrl(processedUrl);
       
       // Set a temporary title based on the URL while loading
-      final host = Uri.parse(url).host;
-      if (host.isNotEmpty) {
-        tab.updateTitle(host);
+      try {
+        final uri = Uri.parse(processedUrl);
+        final host = uri.host;
+        if (host.isNotEmpty) {
+          tab.updateTitle(host);
+          notifyListeners();
+        }
+      } catch (e) {
+        // If URL parsing fails, use the original URL as title
+        tab.updateTitle(processedUrl);
         notifyListeners();
       }
       
       tab.content = FutureBuilder<String>(
-        future: navigate(url: url),
+        future: navigate(url: processedUrl),
         builder: (context, snapshot) {
           if (snapshot.hasData) {
             // Schedule title update for next frame to avoid build phase issues
             WidgetsBinding.instance.addPostFrameCallback((_) {
               _updateTabTitle(_activeTabIndex, snapshot.data!);
             });
-            if (url.startsWith('gopher://')) {
-              return _buildGopherContent(snapshot.data!, baseUrl: url);
-            } else if (url.startsWith('finger://')) {
-              return _buildFingerContent(snapshot.data!, baseUrl: url);
-            } else {
-              return _buildGeminiContent(snapshot.data!, baseUrl: url);
-            }
+            // Use the new ContentRenderer
+            return ContentRenderer(
+              content: snapshot.data!,
+              baseUrl: processedUrl,
+              protocol: _getProtocolFromUrl(processedUrl),
+              onNavigate: navigateToUrl,
+            );
           } else if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
           } else {
@@ -202,134 +221,14 @@ class TabProvider with ChangeNotifier {
     }
   }
 
-  // Build Gemini content using the parser and renderer
-  Widget _buildGeminiContent(String content, {String? baseUrl}) {
-    // Check if this is an error response
-    if (content.startsWith('Failed to fetch')) {
-      // This is an error response, show as plain text
-      return SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Text(
-            content,
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 14,
-            ),
-          ),
-        ),
-      );
-    }
-    
-    // Check if this is a Gemini response with status
-    if (content.startsWith('Status:')) {
-      // Extract the actual content after the status line
-      final lines = content.split('\n');
-      String geminiContent = '';
-      bool foundBody = false;
-      
-      for (final line in lines) {
-        if (foundBody) {
-          geminiContent = '$geminiContent$line\n';
-        } else if (line.trim().isEmpty) {
-          // Empty line after status indicates start of body
-          foundBody = true;
-        }
-      }
-      
-      if (geminiContent.isNotEmpty) {
-        // Parse and render as Gemini content using the compliant parser
-        // Pass the current URL to resolve relative links
-        final elements = parseGemtext(geminiContent, baseUrl: baseUrl);
-        
-        return GeminiRenderer(
-          elements: elements,
-          onLinkTap: (url) {
-            // Navigate to the clicked link in the current tab
-            navigateToUrl(url);
-          },
-        );
-      }
-    }
-    
-    // If no status header, treat as raw Gemini content
-    // Note: We can't resolve relative URLs here since we don't have a base URL
-    final elements = parseGemtext(content);
-    
-    return GeminiRenderer(
-      elements: elements,
-      onLinkTap: (url) {
-        // Navigate to the clicked link in the current tab
-        navigateToUrl(url);
-      },
-    );
-  }
-
-  Widget _buildGopherContent(String content, {String? baseUrl}) {
-    final lines = parseGopherResponse(content);
-    return ListView.builder(
-      itemCount: lines.length,
-      itemBuilder: (context, index) {
-        final line = lines[index];
-        return ListTile(
-          title: Text(line.description),
-          onTap: () {
-            if (line.type == '1' || line.type == '0') {
-              var selector = line.selector;
-              if (!selector.startsWith('/')) {
-                selector = '/selector';
-              }
-              navigateToUrl('gopher://${line.host}:${line.port}$selector');
-            }
-          },
-        );
-      },
-    );
-  }
-
-  // Build Finger content
-  Widget _buildFingerContent(String content, {String? baseUrl}) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header with protocol info
-            Container(
-              padding: const EdgeInsets.all(8.0),
-              margin: const EdgeInsets.only(bottom: 16.0),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8.0),
-                border: Border.all(color: Colors.blue.withOpacity(0.3)),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.person, color: Colors.blue, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Finger Protocol',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue[700],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            // Content
-            SelectableText(
-              content,
-              style: const TextStyle(
-                fontFamily: 'monospace',
-                fontSize: 14,
-                height: 1.4,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
+  // Helper method to determine protocol from URL
+  String _getProtocolFromUrl(String url) {
+    if (url.startsWith('gemini://')) return 'gemini';
+    if (url.startsWith('gopher://')) return 'gopher';
+    if (url.startsWith('finger://')) return 'finger';
+    if (url.startsWith('http://')) return 'http';
+    if (url.startsWith('https://')) return 'https';
+    // Default to gemini for URLs without scheme
+    return 'gemini';
   }
 }

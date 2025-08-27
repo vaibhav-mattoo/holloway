@@ -29,3 +29,4 @@ pub async fn connect_and_fetch_gopher(host: &str, port: u16, path: &str) -> Resu
 
     Ok(String::from_utf8_lossy(&response).to_string())
 }
+

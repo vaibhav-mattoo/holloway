@@ -13,7 +13,13 @@ pub async fn navigate_internal(url: String) -> Result<String, String> {
                 Err(_) => {
                     // If both fail, try the final fallback with kennedy.gemi.dev
                     let fallback_url = format!("gemini://kennedy.gemi.dev/search?{}", url);
-                    match crate::api::protocols::gemini::connect_and_fetch_gemini("kennedy.gemi.dev", 1965, &fallback_url).await {
+                    match crate::api::protocols::gemini::connect_and_fetch_gemini(
+                        "kennedy.gemi.dev",
+                        1965,
+                        &fallback_url,
+                    )
+                    .await
+                    {
                         Ok(content) => return Ok(content),
                         Err(_) => return Err("Invalid URL format".to_string()),
                     }
@@ -30,22 +36,34 @@ pub async fn navigate_internal(url: String) -> Result<String, String> {
                 None => return Err("Invalid host in URL".to_string()),
             };
             let port = parsed_url.port().unwrap_or(1965);
-            
+
             // Normalize the URL for Gemini requests - ensure it has a trailing slash if no path
-            let mut request_url = if url.starts_with("gemini://") { url.clone() } else { format!("gemini://{}", url) };
-            
+            let mut request_url = if url.starts_with("gemini://") {
+                url.clone()
+            } else {
+                format!("gemini://{}", url)
+            };
+
             // If the URL doesn't have a path or ends with just the host, add a trailing slash
             if !request_url.contains('/') || request_url.ends_with(&host) {
                 request_url.push('/');
             }
-            
+
             // Try the original request first
-            match crate::api::protocols::gemini::connect_and_fetch_gemini(host, port, &request_url).await {
+            match crate::api::protocols::gemini::connect_and_fetch_gemini(host, port, &request_url)
+                .await
+            {
                 Ok(content) => Ok(content),
                 Err(_) => {
                     // If the original request fails, try with the fallback URL format
                     let fallback_url = format!("gemini://kennedy.gemi.dev/search?{}", url);
-                    match crate::api::protocols::gemini::connect_and_fetch_gemini("kennedy.gemi.dev", 1965, &fallback_url).await {
+                    match crate::api::protocols::gemini::connect_and_fetch_gemini(
+                        "kennedy.gemi.dev",
+                        1965,
+                        &fallback_url,
+                    )
+                    .await
+                    {
                         Ok(content) => Ok(content),
                         Err(e) => Err(format!("Failed to fetch {}: {}", request_url, e)),
                     }
@@ -58,7 +76,13 @@ pub async fn navigate_internal(url: String) -> Result<String, String> {
                 None => return Err("Invalid host in URL".to_string()),
             };
             let port = parsed_url.port().unwrap_or(70);
-            match crate::api::protocols::gopher::connect_and_fetch_gopher(host, port, parsed_url.path()).await {
+            match crate::api::protocols::gopher::connect_and_fetch_gopher(
+                host,
+                port,
+                parsed_url.path(),
+            )
+            .await
+            {
                 Ok(content) => Ok(content),
                 Err(e) => Err(format!("Failed to fetch {}: {}", url, e)),
             }
@@ -74,51 +98,15 @@ pub async fn navigate_internal(url: String) -> Result<String, String> {
             } else {
                 parsed_url.username().to_string()
             };
-            match crate::api::protocols::finger::connect_and_fetch_finger(host, port, &username).await {
+            match crate::api::protocols::finger::connect_and_fetch_finger(host, port, &username)
+                .await
+            {
                 Ok(content) => Ok(content),
                 Err(e) => Err(format!("Failed to fetch {}: {}", url, e)),
             }
         }
-        _ => {
-            // This case should not be reached since we always add gemini:// prefix for unknown schemes
-            // But if somehow we get here, try gemini as fallback
-            let gemini_url = format!("gemini://{}", url);
-            match Url::parse(&gemini_url) {
-                Ok(parsed_gemini_url) => {
-                    let host = match parsed_gemini_url.host_str() {
-                        Some(h) => h,
-                        None => return Err("Invalid host in URL".to_string()),
-                    };
-                    let port = parsed_gemini_url.port().unwrap_or(1965);
-                    
-                    // Normalize the URL for Gemini requests
-                    let mut request_url = gemini_url;
-                    if !request_url.contains('/') || request_url.ends_with(&host) {
-                        request_url.push('/');
-                    }
-                    
-                    // Try the original request first
-                    match crate::api::protocols::gemini::connect_and_fetch_gemini(host, port, &request_url).await {
-                        Ok(content) => Ok(content),
-                        Err(_) => {
-                            // If the original request fails, try with the fallback URL format
-                            let fallback_url = format!("gemini://kennedy.gemi.dev/search?{}", url);
-                            match crate::api::protocols::gemini::connect_and_fetch_gemini("kennedy.gemi.dev", 1965, &fallback_url).await {
-                                Ok(content) => Ok(content),
-                                Err(_) => Err("Invalid URL".to_string()),
-                            }
-                        }
-                    }
-                }
-                Err(_) => {
-                    // If parsing fails, try the final fallback
-                    let fallback_url = format!("gemini://kennedy.gemi.dev/search?{}", url);
-                    match crate::api::protocols::gemini::connect_and_fetch_gemini("kennedy.gemi.dev", 1965, &fallback_url).await {
-                        Ok(content) => Ok(content),
-                        Err(_) => Err("Invalid URL".to_string()),
-                    }
-                }
-            }
-        }
+        _ => Err(
+            "Unsupported URL scheme. Only gemini, gopher, and finger are supported.".to_string(),
+        ),
     }
 }

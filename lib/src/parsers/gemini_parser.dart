@@ -19,6 +19,7 @@ class TextElement {
   final String? displayText; // For link elements
   final int? headingLevel; // For heading elements (1, 2, or 3)
   final String? altText; // For preformat toggle elements
+  final LinkType? linkType; // For link elements
 
   TextElement({
     required this.type,
@@ -27,6 +28,7 @@ class TextElement {
     this.displayText,
     this.headingLevel,
     this.altText,
+    this.linkType,
   });
 
   /// Parse a single line according to the Gemini specification
@@ -68,12 +70,24 @@ class TextElement {
         
         String? url;
         String? displayText;
+        LinkType? linkType;
         
         if (parts.isNotEmpty) {
           url = parts[0];
           
+          // Determine link type based on URL scheme
+          linkType = _determineLinkType(url);
+          
           // Resolve relative URLs against base URL if provided
           if (baseUrl != null && !url.startsWith('gemini://') && !url.startsWith('http://') && !url.startsWith('https://')) {
+            url = _resolveRelativeUrl(baseUrl, url);
+          } else if (baseUrl != null && url.startsWith('://')) {
+            // Handle URLs that start with :// (missing scheme)
+            // This is a malformed URL, try to fix it by adding gemini://
+            url = 'gemini$url';
+            url = _resolveRelativeUrl(baseUrl, url);
+          } else if (baseUrl != null && !url.contains('://')) {
+            // Handle URLs without any scheme - assume they're relative to current page
             url = _resolveRelativeUrl(baseUrl, url);
           }
           
@@ -90,6 +104,7 @@ class TextElement {
           content: line,
           url: url,
           displayText: displayText,
+          linkType: linkType,
         );
       } else if (trimmed.startsWith('#')) {
         // Heading line: #, ##, or ###
@@ -130,6 +145,35 @@ class TextElement {
   }
 }
 
+/// Represents different types of links that can appear in Gemini content
+enum LinkType {
+  gemini,         // gemini:// URLs
+  gopher,         // gopher:// URLs
+  finger,         // finger:// URLs
+  http,           // http:// URLs
+  https,          // https:// URLs
+  email,          // mailto: URLs
+  xmpp,           // xmpp: URLs
+  irc,            // irc: URLs
+  relative,       // Relative URLs
+  unknown,        // Unknown or unsupported URL types
+}
+
+/// Determine the type of a link based on its URL scheme
+LinkType _determineLinkType(String url) {
+  if (url.startsWith('gemini://')) return LinkType.gemini;
+  if (url.startsWith('gopher://')) return LinkType.gopher;
+  if (url.startsWith('finger://')) return LinkType.finger;
+  if (url.startsWith('http://')) return LinkType.http;
+  if (url.startsWith('https://')) return LinkType.https;
+  if (url.startsWith('mailto:')) return LinkType.email;
+  if (url.startsWith('xmpp:')) return LinkType.xmpp;
+  if (url.startsWith('irc:')) return LinkType.irc;
+  if (url.startsWith('/') || url.startsWith('./') || url.startsWith('../')) return LinkType.relative;
+  if (!url.contains('://')) return LinkType.relative;
+  return LinkType.unknown;
+}
+
 /// Parse gemtext content according to the official specification
 /// Maintains parser state and handles each line in isolation
 /// Optionally resolves relative URLs against a base URL
@@ -164,6 +208,12 @@ List<TextElement> parseGemtext(String content, {String? baseUrl}) {
 /// Handles both absolute and relative paths correctly
 String _resolveRelativeUrl(String baseUrl, String relativeUrl) {
   try {
+    // Handle malformed URLs that start with ://
+    if (relativeUrl.startsWith('://')) {
+      // This is a malformed URL, try to fix it by adding gemini://
+      relativeUrl = 'gemini$relativeUrl';
+    }
+    
     // Parse the base URL
     final baseUri = Uri.parse(baseUrl);
     
@@ -203,7 +253,15 @@ String _resolveRelativeUrl(String baseUrl, String relativeUrl) {
       return '${baseUri.scheme}://${baseUri.host}$portString$resolvedPath';
     }
   } catch (e) {
-    // If URL parsing fails, return the original relative URL
+    // If URL parsing fails, try to construct a valid URL
+    if (relativeUrl.startsWith('://')) {
+      // For malformed URLs starting with ://, assume gemini://
+      return 'gemini$relativeUrl';
+    } else if (!relativeUrl.contains('://')) {
+      // For URLs without scheme, assume gemini://
+      return 'gemini://$relativeUrl';
+    }
+    // If all else fails, return the original relative URL
     return relativeUrl;
   }
 }
@@ -319,12 +377,20 @@ class GeminiRenderer extends StatelessWidget {
                               color: theme.colorScheme.primary,
                             ),
                           ),
-                        Text(
-                          element.url!,
-                          style: linkStyle ?? defaultTextStyle?.copyWith(
-                            color: theme.colorScheme.primary,
-                            decoration: TextDecoration.underline,
-                          ),
+                        Row(
+                          children: [
+                            _buildLinkTypeIcon(element.linkType),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                element.url!,
+                                style: linkStyle ?? defaultTextStyle?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                  decoration: TextDecoration.underline,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -378,5 +444,31 @@ class GeminiRenderer extends StatelessWidget {
         }
       },
     );
+  }
+
+  /// Build an icon representing the link type
+  Widget _buildLinkTypeIcon(LinkType? linkType) {
+    switch (linkType) {
+      case LinkType.gemini:
+        return const Icon(Icons.explore, color: Colors.blue, size: 16);
+      case LinkType.gopher:
+        return const Icon(Icons.folder, color: Colors.orange, size: 16);
+      case LinkType.finger:
+        return const Icon(Icons.person, color: Colors.green, size: 16);
+      case LinkType.http:
+      case LinkType.https:
+        return const Icon(Icons.language, color: Colors.purple, size: 16);
+      case LinkType.email:
+        return const Icon(Icons.email, color: Colors.red, size: 16);
+      case LinkType.xmpp:
+        return const Icon(Icons.chat, color: Colors.teal, size: 16);
+      case LinkType.irc:
+        return const Icon(Icons.forum, color: Colors.indigo, size: 16);
+      case LinkType.relative:
+        return const Icon(Icons.link, color: Colors.grey, size: 16);
+      case LinkType.unknown:
+      default:
+        return const Icon(Icons.link, color: Colors.grey, size: 16);
+    }
   }
 }
