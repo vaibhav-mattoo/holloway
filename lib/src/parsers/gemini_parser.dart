@@ -427,6 +427,32 @@ class GeminiRenderer extends StatelessWidget {
               return const SizedBox(height: 8.0);
             }
             
+            // Check if this text element is preformatted content
+            final isPreformatted = _isPreformattedContent(element, index);
+            
+            if (isPreformatted) {
+              // Check if the next element is also preformatted to adjust spacing
+              final nextIsPreformatted = index < elements.length - 1 && 
+                  _isPreformattedContent(elements[index + 1], index + 1);
+              
+              // Render as preformatted text with monospace font and minimal spacing
+              return Padding(
+                padding: EdgeInsets.only(
+                  top: 2.0,
+                  bottom: nextIsPreformatted ? 1.0 : 4.0, // Less spacing between preformatted lines
+                ),
+                child: SelectableText(
+                  element.content,
+                  style: monoStyle ?? defaultTextStyle?.copyWith(
+                    fontFamily: 'monospace',
+                    fontSize: 13.0,
+                    height: 1.2, // Reduced line height for preformatted text
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              );
+            }
+            
             // Regular text lines - wrap to fit viewport as per specification
             return Padding(
               padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -444,6 +470,98 @@ class GeminiRenderer extends StatelessWidget {
         }
       },
     );
+  }
+
+  /// Determine if a text element should be rendered as preformatted content
+  bool _isPreformattedContent(TextElement element, int index) {
+    final content = element.content;
+    
+    // Check for obvious preformatted indicators
+    if (content.startsWith(' ') || 
+        content.startsWith('\t') ||
+        content.contains('  ') ||
+        content.contains('│') ||
+        content.contains('┌') ||
+        content.contains('└') ||
+        content.contains('├') ||
+        content.contains('─') ||
+        content.contains('┐') ||
+        content.contains('┘') ||
+        content.contains('┤')) {
+      return true;
+    }
+    
+    // Check for ASCII art patterns
+    if (content.contains('-') && content.trim().startsWith('-') && content.length > 10) {
+      return true;
+    }
+    
+    // Check for code-like patterns
+    if (content.contains('{') && content.contains('}') ||
+        content.contains('(') && content.contains(')') ||
+        content.contains('[') && content.contains(']')) {
+      // Look at surrounding context to see if this is part of a code block
+      if (index > 0 && index < elements.length - 1) {
+        final prevContent = elements[index - 1].content;
+        final nextContent = elements[index + 1].content;
+        
+        // If surrounding lines also have similar patterns, likely preformatted
+        if ((prevContent.contains('{') || prevContent.contains('(') || prevContent.contains('[')) &&
+            (nextContent.contains('}') || nextContent.contains(')') || nextContent.contains(']'))) {
+          return true;
+        }
+      }
+    }
+    
+    // Check for table-like patterns
+    if (content.contains('|') && content.split('|').length > 2) {
+      return true;
+    }
+    
+    // Check for indented content that might be part of a structure
+    if (content.startsWith('  ') && content.trim().isNotEmpty) {
+      // Look at previous line to see if this is continuation
+      if (index > 0) {
+        final prevContent = elements[index - 1].content;
+        if (prevContent.trim().endsWith(':') || prevContent.trim().endsWith('{')) {
+          return true;
+        }
+      }
+    }
+    
+    // Check if this line is part of a preformatted block by looking at context
+    if (index > 0) {
+      final prevElement = elements[index - 1];
+      final prevContent = prevElement.content;
+      
+      // If previous line is preformatted, this line likely is too
+      if (_isPreformattedContent(prevElement, index - 1)) {
+        // Check if this line has similar characteristics or is a continuation
+        if (content.trim().isNotEmpty && 
+            (content.startsWith(' ') || 
+             content.startsWith('\t') ||
+             content.contains('  ') ||
+             content.length > 20 || // Long lines are often preformatted
+             content.contains('│') ||
+             content.contains('┌') ||
+             content.contains('└') ||
+             content.contains('├') ||
+             content.contains('─') ||
+             content.contains('┐') ||
+             content.contains('┘') ||
+             content.contains('┤'))) {
+          return true;
+        }
+        
+        // If previous line was preformatted and this line is not empty, 
+        // treat it as preformatted to maintain block continuity
+        if (content.trim().isNotEmpty) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
 
   /// Build an icon representing the link type
