@@ -247,9 +247,15 @@ String _resolveRelativeUrl(String baseUrl, String relativeUrl) {
       final resolvedPath = '/${pathSegments.join('/')}${remainingPath.isNotEmpty ? '/$remainingPath' : ''}';
       return '${baseUri.scheme}://${baseUri.host}$portString$resolvedPath';
     } else {
-      // Simple relative path (same directory)
-      final currentPath = baseUri.path.endsWith('/') ? baseUri.path : '${baseUri.path}/';
-      final resolvedPath = currentPath + relativeUrl;
+      // Simple relative path - navigate to parent directory and then to the file
+      // This is the correct behavior for Gemini: => index.gmi from /path/file.gmi goes to /path/index.gmi
+      final pathSegments = baseUri.pathSegments.toList();
+      if (pathSegments.isNotEmpty) {
+        // Remove the last segment (the current file) to go to parent directory
+        pathSegments.removeLast();
+      }
+      final parentPath = pathSegments.isNotEmpty ? '/${pathSegments.join('/')}/' : '/';
+      final resolvedPath = parentPath + relativeUrl;
       return '${baseUri.scheme}://${baseUri.host}$portString$resolvedPath';
     }
   } catch (e) {
